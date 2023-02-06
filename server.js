@@ -1,58 +1,99 @@
-const express = require('express')
-const expressGraphQL = require('express-graphql')
-const {
+import express from 'express'
+import { graphqlHTTP } from 'express-graphql'
+import {
   GraphQLSchema,
   GraphQLObjectType,
   GraphQLString,
   GraphQLList,
   GraphQLInt,
   GraphQLNonNull
-} = require('graphql')
+} from 'graphql'
+
 const app = express()
 
-const authors = [
-	{ id: 1, name: 'J. K. Rowling' },
-	{ id: 2, name: 'J. R. R. Tolkien' },
-	{ id: 3, name: 'Brent Weeks' }
+const leagues = [
+  { id: 1, name: 'Premier League' },
+  { id: 2, name: 'Liga 1 Shopee' }
 ]
 
-const books = [
-	{ id: 1, name: 'Harry Potter and the Chamber of Secrets', authorId: 1 },
-	{ id: 2, name: 'Harry Potter and the Prisoner of Azkaban', authorId: 1 },
-	{ id: 3, name: 'Harry Potter and the Goblet of Fire', authorId: 1 },
-	{ id: 4, name: 'The Fellowship of the Ring', authorId: 2 },
-	{ id: 5, name: 'The Two Towers', authorId: 2 },
-	{ id: 6, name: 'The Return of the King', authorId: 2 },
-	{ id: 7, name: 'The Way of Shadows', authorId: 3 },
-	{ id: 8, name: 'Beyond the Shadows', authorId: 3 }
+const teams = [
+  { id: 1, name: 'Manchester United', leagueId: 1 },
+  { id: 2, name: 'Liverpool', leagueId: 1 },
+  { id: 3, name: 'Persib', leagueId: 2 },
+  { id: 4, name: 'Rans FC', leagueId: 2 }
 ]
 
-const BookType = new GraphQLObjectType({
-  name: 'Book',
-  description: 'This represents a book written by an author',
+const players = [
+  { id: 1, name: 'Harry Magurie', teamId: 1 },
+  { id: 2, name: 'De Gea', teamId: 1 },
+  { id: 3, name: 'Salah', teamId: 2 },
+  { id: 4, name: 'Van Djik', teamId: 2 },
+  { id: 5, name: 'David Dasilva', teamId: 3 },
+  { id: 6, name: 'Ciro Alves', teamId: 3 },
+  { id: 7, name: 'Raffi Ahmad', teamId: 4 },
+  { id: 8, name: 'Rayanza', teamId: 4 }
+]
+
+const LeagueType = new GraphQLObjectType({
+  name: 'League',
+  description: "List leagues football",
   fields: () => ({
     id: { type: GraphQLNonNull(GraphQLInt) },
     name: { type: GraphQLNonNull(GraphQLString) },
-    authorId: { type: GraphQLNonNull(GraphQLInt) },
-    author: {
-      type: AuthorType,
-      resolve: (book) => {
-        return authors.find(author => author.id === book.authorId)
+    teams: {
+      type: new GraphQLList(TeamType),
+      resolve: (league) => {
+        return teams.filter(team => team.leagueId === league.id)
+      },
+      players: {
+        type: new GraphQLList(PlayerType),
+        resolve: (team) => {
+          return players.filter(player => player.teamId === team.id)
+        }
       }
     }
   })
 })
 
-const AuthorType = new GraphQLObjectType({
-  name: 'Author',
-  description: 'This represents a author of a book',
+const TeamType = new GraphQLObjectType({
+  name: 'Team',
+  description: "List teams football",
   fields: () => ({
     id: { type: GraphQLNonNull(GraphQLInt) },
     name: { type: GraphQLNonNull(GraphQLString) },
-    books: {
-      type: new GraphQLList(BookType),
-      resolve: (author) => {
-        return books.filter(book => book.authorId === author.id)
+    leagueId: { type: GraphQLNonNull(GraphQLInt) },
+    league: {
+      type: LeagueType,
+      resolve: (team) => {
+        return leagues.find(league => league.id === team.leagueId)
+      }
+    },
+    players: {
+      type: new GraphQLList(PlayerType),
+      resolve: (team) => {
+        return players.filter(player => player.teamId === team.id)
+      }
+    },
+  })
+})
+
+const PlayerType = new GraphQLObjectType({
+  name: 'Player',
+  description: "List players football",
+  fields: () => ({
+    id: { type: GraphQLNonNull(GraphQLInt) },
+    name: { type: GraphQLNonNull(GraphQLString) },
+    teamId: { type: GraphQLNonNull(GraphQLInt) },
+    teams: {
+      type: TeamType,
+      resolve: (player) => {
+        return teams.find(team => team.id === player.teamId)
+      },
+      leagues: {
+        type: LeagueType,
+        resolve: (team) => {
+          return leagues.find(league => league.id === team.leagueId)
+        }
       }
     }
   })
@@ -62,32 +103,45 @@ const RootQueryType = new GraphQLObjectType({
   name: 'Query',
   description: 'Root Query',
   fields: () => ({
-    book: {
-      type: BookType,
-      description: 'A Single Book',
+    league: {
+      type: LeagueType,
+      description: 'A Single League',
       args: {
         id: { type: GraphQLInt }
       },
-      resolve: (parent, args) => books.find(book => book.id === args.id)
+      resolve: (parent, args) => leagues.find(league => league.id === args.id)
     },
-    books: {
-      type: new GraphQLList(BookType),
-      description: 'List of All Books',
-      resolve: () => books
+    leagues: {
+      type: new GraphQLList(LeagueType),
+      description: 'List of All Leagues',
+      resolve: () => leagues
     },
-    authors: {
-      type: new GraphQLList(AuthorType),
-      description: 'List of All Authors',
-      resolve: () => authors
-    },
-    author: {
-      type: AuthorType,
-      description: 'A Single Author',
+    team: {
+      type: TeamType,
+      description: 'A Single Team',
       args: {
         id: { type: GraphQLInt }
       },
-      resolve: (parent, args) => authors.find(author => author.id === args.id)
-    }
+      resolve: (parent, args) => teams.find(team => team.id === args.id)
+    },
+    teams: {
+      type: new GraphQLList(TeamType),
+      description: 'List of All Teams',
+      resolve: () => teams
+    },
+    player: {
+      type: PlayerType,
+      description: 'A Single Player',
+      args: {
+        id: { type: GraphQLInt }
+      },
+      resolve: (parent, args) => players.find(player => player.id === args.id)
+    },
+    players: {
+      type: new GraphQLList(PlayerType),
+      description: 'List of All Players',
+      resolve: () => players
+    },
   })
 })
 
@@ -95,41 +149,68 @@ const RootMutationType = new GraphQLObjectType({
   name: 'Mutation',
   description: 'Root Mutation',
   fields: () => ({
-    addBook: {
-      type: BookType,
-      description: 'Add a book',
+    addPlayer: {
+      type: PlayerType,
+      description: 'Add a player',
       args: {
         name: { type: GraphQLNonNull(GraphQLString) },
-        authorId: { type: GraphQLNonNull(GraphQLInt) }
+        teamId: { type: GraphQLNonNull(GraphQLInt) }
       },
       resolve: (parent, args) => {
-        const book = { id: books.length + 1, name: args.name, authorId: args.authorId }
-        books.push(book)
-        return book
+        const newPlayer = { id: players.length + 1, name: args.name, teamId: args.teamId }
+        players.push(newPlayer)
+        return newPlayer
       }
     },
-    addAuthor: {
-      type: AuthorType,
-      description: 'Add an author',
+    editPlayer: {
+      type: PlayerType,
+      description: 'Add a player',
       args: {
-        name: { type: GraphQLNonNull(GraphQLString) }
+        id: { type: GraphQLNonNull(GraphQLInt) },
+        name: { type: GraphQLNonNull(GraphQLString) },
+        teamId: { type: GraphQLNonNull(GraphQLInt) }
       },
       resolve: (parent, args) => {
-        const author = { id: authors.length + 1, name: args.name }
-        authors.push(author)
-        return author
+        const indexPlayer = getIndexPlayerById(args.id)
+        players[indexPlayer].name = args.name
+        players[indexPlayer].teamId = args.teamId
+        return players[indexPlayer]
+      }
+    },
+    deletePlayer: {
+      type: PlayerType,
+      description: 'Delete a player',
+      args: {
+        id: { type: GraphQLNonNull(GraphQLInt) },
+      },
+      resolve: (parent, args) => {
+        const indexPlayer = getIndexPlayerById(args.id)
+        const deletedPlayer = players.slice(indexPlayer, indexPlayer + 1)
+        players.splice(indexPlayer, 1)
+        return deletedPlayer[0]
       }
     }
   })
 })
+
+const getIndexPlayerById = (id) => {
+  const indexPlayer = players.findIndex(player => player.id === id)
+  if (indexPlayer < 0) {
+    return false
+  }
+  return indexPlayer
+}
 
 const schema = new GraphQLSchema({
   query: RootQueryType,
   mutation: RootMutationType
 })
 
-app.use('/graphql', expressGraphQL({
+app.use('/graphql', graphqlHTTP({
   schema: schema,
   graphiql: true
 }))
+
+app.get('/', (req, res) => res.redirect('/graphql'))
+
 app.listen(5000, () => console.log('Server Running'))
